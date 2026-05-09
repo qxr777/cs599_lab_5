@@ -1,0 +1,9 @@
+root ::= report
+report ::= "{" "\"bridge_id\":" string ",\"inspector\":" string ",\"elements\":" elements "}"
+elements ::= "[" (element ("," element)*)? "]"
+element ::= "{" "\"type\":" etype ",\"index\":" number ",\"grade\":" grade ",\"severity\":" float "}"
+etype ::= "\"pier\"" | "\"girder\"" | "\"deck\"" | "\"abutment\""
+grade ::= "\"A\"" | "\"B\"" | "\"C\"" | "\"D\"" | "\"E\""
+string ::= "\"" [^"]* "\""
+number ::= [0-9]+
+float ::= [0-9] "." [0-9] [0-9]?
