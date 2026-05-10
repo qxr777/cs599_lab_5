@@ -7,7 +7,7 @@ import statistics
 API_URL = "http://localhost:8080/completion"
 CONCURRENCY_LEVELS = [1, 4, 8, 16, 32] # 模拟不同数量的并发用户
 REQUESTS_PER_USER = 1
-GEN_LEN = 128
+GEN_LEN = 1024
 
 async def send_request(session, user_id):
     payload = {
@@ -55,7 +55,7 @@ async def run_stress_level(concurrency):
     system_throughput = total_tokens / total_time
     
     print(f"✅ 完成！成功率: {len(success_results)}/{concurrency}")
-    print(f"⏱️ 平均首位用户感知延迟: {avg_latency:.2f}s")
+    print(f"⏱️ 平均完整结果等待时间: {avg_latency:.2f}s")
     print(f"📊 系统总吞吐量: {system_throughput:.2f} tokens/s")
 
 async def main():
@@ -63,7 +63,13 @@ async def main():
     print("  CS599 Lab 5: Experiment D - PagedAttention & 高并发性能测试")
     print("=" * 60)
     print("说明：观察随着并发增加，系统总吞吐量是否能保持高位，还是会由于内存压力崩溃。")
-    
+
+    # Warm-up: 触发 GPU kernel 编译和 KV Cache 分配，避免污染基准数据
+    print("🔥 正在进行 Warm-up 预热...")
+    async with aiohttp.ClientSession() as session:
+        await send_request(session, "warmup")
+    print("✅ 预热完成。")
+
     for level in CONCURRENCY_LEVELS:
         await run_stress_level(level)
         await asyncio.sleep(2) # 给服务器一点喘息时间
