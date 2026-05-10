@@ -14,22 +14,25 @@ TEST_CASE = """
 """
 
 def call_llm(use_constraint=False):
-    """调用 llama.cpp API"""
+    """调用 llama.cpp API，返回 (content, elapsed_seconds)"""
     prompt = f"Report: {TEST_CASE.strip()}\nResult JSON:"
-    
+
     payload = {
         "prompt": prompt,
         "n_predict": 512,
         "temperature": 0.1 if use_constraint else 0.8,
         "stream": False,
     }
-    
+
     if use_constraint:
         with open(GBNF_FILE, "r") as f:
             payload["grammar"] = f.read().strip()
-    
+
+    start = time.time()
     response = requests.post(URL, json=payload, timeout=60)
-    return response.json().get("content", "").strip()
+    elapsed = time.time() - start
+    content = response.json().get("content", "").strip()
+    return content, elapsed
 
 def run_comparison():
     # ---- 教学展示：GBNF 语法定义 ----
@@ -50,17 +53,19 @@ def run_comparison():
     # ---- 对照组 ----
     print("\n【对照组】不使用 GBNF (自由生成)")
     print("-" * 40)
-    raw_output = call_llm(use_constraint=False)
+    raw_output, raw_time = call_llm(use_constraint=False)
     print(f"原始输出:\n> {raw_output}")
+    print(f"\n⏱️  响应耗时: {raw_time:.2f}s")
     print(f"\n-> 结论: 对照组输出了大量解释文本，难以直接提取 JSON 数据。")
 
     # ---- 实验组 ----
     print(f"\n【实验组】注入手动编写的 GBNF 语法约束")
     print("-" * 40)
     try:
-        gbnf_output = call_llm(use_constraint=True)
+        gbnf_output, gbnf_time = call_llm(use_constraint=True)
         print(f"原始输出:\n> {gbnf_output}")
-        
+        print(f"\n⏱️  响应耗时: {gbnf_time:.2f}s")
+
         data = json.loads(gbnf_output)
         print("\n✅ 成功解析 JSON 数据!")
         print(f"   桥梁ID: {data.get('bridge_id')}")
@@ -70,6 +75,22 @@ def run_comparison():
             print(f"     [{i+1}] 类型: {elem.get('type'):8} 编号: {elem.get('index'):<2} 等级: {elem.get('grade'):2} 严重度: {elem.get('severity')}")
     except Exception as e:
         print(f"❌ 解析失败: {e}")
+        gbnf_time = None
+
+    # ---- 耗时对比 ----
+    print("\n" + "-" * 50)
+    print("⏱️  耗时对比")
+    print("-" * 50)
+    print(f"  无 GBNF: {raw_time:.2f}s (生成 {len(raw_output)} 字符)")
+    if gbnf_time:
+        print(f"  有 GBNF: {gbnf_time:.2f}s (生成 {len(gbnf_output)} 字符)")
+        diff = raw_time - gbnf_time
+        speedup = raw_time / gbnf_time if gbnf_time > 0 else float('inf')
+        if diff > 0:
+            print(f"  GBNF 节省了 {diff:.2f}s ({speedup:.1f}x 更快)")
+        else:
+            print(f"  GBNF 多用了 {-diff:.2f}s（生成更紧凑的内容）")
+    print("-" * 50)
 
     # ---- 最终结论 ----
     print("\n" + "=" * 60)
