@@ -51,8 +51,16 @@ def run_experiment():
             print(f"{length:<20} | {avg_lat:<20.2f} | {tps:.2f}")
 
     print("-" * 60)
-    print("💡 结论提示：Prefill 阶段是并行的。随着输入长度翻倍，耗时应呈线性增长。")
-    print("如果增长是非线性的，说明 GPU 算力已达到瓶颈。")
+    print("💡 结论分析：")
+    print("1. Prefill 阶段是并行计算：输入 prompt 的所有 token 可以一次性")
+    print("   打包送入 GPU，因此 Tokens/s 应基本保持恒定。")
+    print("2. 短 prompt 的 Tokens/s 通常偏高——因为 GPU kernel 启动、网络")
+    print("   传输等固定开销在小矩阵上占比更大，导致测量值虚高。")
+    print("3. 如果 Tokens/s 随长度增长出现明显下降，说明 GPU 算力已逼近")
+    print("   上限（Compute-bound），或长 prompt 触发了 kernel 分片执行。")
+    print("4. 对比实验三（Decoding）的 TPS 值：Prefill 的 Tokens/s 通常")
+    print("   远高于 Decoding 的 TPS，这是矩阵-矩阵乘法 vs 向量-矩阵")
+    print("   乘法的本质差异——前者计算密集，后者内存密集。")
 
 if __name__ == "__main__":
     run_experiment()

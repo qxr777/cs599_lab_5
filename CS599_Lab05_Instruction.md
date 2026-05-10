@@ -147,13 +147,15 @@ curl http://localhost:8080/health
 # 应返回 {"status":"ok"}
 ```
 
-### 2.3（可选）启动 Arize Phoenix
+### 2.3（可选）Docker 监控栈
 
-实验四会将 OpenTelemetry Trace 发送到 Phoenix，用于可视化追踪请求延迟。
+实验四会将 OpenTelemetry Trace 发送到 Phoenix，实验五/六可通过 Prometheus + Grafana 实时监控 llama-server 指标。三个组件统一通过 Docker Compose 启动：
 
 ```bash
-phoenix serve
-# 默认监听 http://localhost:6006
+docker compose up -d
+# Phoenix:    http://localhost:6006
+# Prometheus: http://localhost:19090
+# Grafana:    http://localhost:3000 (admin/admin)
 ```
 
 ---
@@ -461,7 +463,7 @@ async def run_batch(concurrency):
 ### 6.4 执行步骤
 
 1. 确保 llama-server 已用正确参数启动：`--parallel 8 --ctx-size 65536`
-2. （可选）启动 Phoenix：`phoenix serve`
+2. （可选）启动 Docker 监控栈：`docker compose up -d`（包含 Phoenix、Prometheus、Grafana）
 3. 运行实验：
 
 ```bash
@@ -770,6 +772,12 @@ docker compose up -d
 
 ```yaml
 services:
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports: ["6006:6006"]
+    environment:
+      - PHOENIX_PORT=6006
+
   prometheus:
     image: prom/prometheus:latest
     ports: ["19090:9090"]
@@ -788,6 +796,17 @@ services:
       - ./cs599-dashboard.json:/var/lib/grafana/dashboards/cs599-dashboard.json:ro
 ```
 
+只需一条命令即可启动全部监控栈：
+
+```bash
+docker compose up -d
+# Phoenix:    http://localhost:6006
+# Prometheus: http://localhost:19090
+# Grafana:    http://localhost:3000 (admin/admin)
+```
+
+完成后停止容器：`docker compose down`
+
 Prometheus 配置文件 `prometheus.yml` 指示抓取 llama-server 的 metrics：
 
 ```yaml
@@ -805,6 +824,7 @@ scrape_configs:
 
 | 服务 | 地址 | 说明 |
 |------|------|------|
+| Phoenix | http://localhost:6006 | OpenTelemetry Trace 可视化，实验四的 Trace 数据发送到这里 |
 | Grafana | http://localhost:3000 | 登录 admin/admin，自动加载预设 Dashboard |
 | Prometheus | http://localhost:19090 | 查询原生指标 |
 
@@ -989,6 +1009,7 @@ print(pd.concat([bw_data, tp_data], axis=1).T)
 | GQA | Grouped-Query Attention | 分组查询注意力 |
 | MLA | Multi-Head Latent Attention | 多头潜注意力（DeepSeek 提出） |
 | PagedAttention | — | vLLM 提出的 KV Cache 分页管理机制 |
+| Phoenix | Arize Phoenix | OpenTelemetry Trace 可视化工具 |
 | Slot | — | llama-server 的并发请求处理槽位 |
 | FP16 | Half-Precision Floating Point | 16 位浮点数，每个参数占 2 字节 |
 | Q4_K_M | 4-bit Quantization (K-quants, Medium) | 4-bit 量化格式之一 |
@@ -1013,7 +1034,7 @@ print(pd.concat([bw_data, tp_data], axis=1).T)
 | `Connection refused` | llama-server 未启动 | 先确认 `curl http://localhost:8080/health` 返回 `{"status":"ok"}` |
 | 请求超时 | prompt 过长导致 Prefill 时间超过默认 timeout | 增大 `timeout` 参数，或减少 prompt 长度 |
 | JSON 解析失败 | GBNF 约束未生效或 model 版本不同 | 确认 `bridge_standard.gbnf` 路径正确，检查 llama-server 日志 |
-| Phoenix 无数据 | OTLP endpoint 配置错误 | 确认 `phoenix serve` 已在 6006 端口运行 |
+| Phoenix 无数据 | Docker 监控栈未启动 | 确认 `docker compose up -d` 已运行，Phoenix 在 6006 端口监听 |
 
 ### B.3 实验数据异常
 
@@ -1027,5 +1048,5 @@ print(pd.concat([bw_data, tp_data], axis=1).T)
 
 ---
 
-**版本**: v8.0-OptionalExperiments
+**版本**: v8.1-DockerUnified
 **最后更新**: 2026-05-10
