@@ -355,7 +355,7 @@ def run_part_c():
 
     ax2.plot(results_conc, results_ratio, marker='s', color='#2ecc71', linewidth=2, markersize=8)
     ax2.axhline(y=100, color='gray', ls='--', alpha=0.5)
-    ax2.axhline(y=70, color='red', ls='--', alpha=0.5, label='30% 衰减线')
+    ax2.axhline(y=70, color='red', ls='--', alpha=0.5, label='30% degradation threshold')
     ax2.set_xlabel('Concurrent Requests')
     ax2.set_ylabel('Relative to Baseline (%)')
     ax2.set_title('TPS Retention Rate')

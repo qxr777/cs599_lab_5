@@ -5,7 +5,7 @@ import statistics
 
 # 实验配置
 API_URL = "http://localhost:8080/completion"
-CONCURRENCY_LEVELS = [1, 4, 8, 16, 32] # 模拟不同数量的并发用户
+CONCURRENCY_LEVELS = [1, 4, 8, 16] # 模拟不同数量的并发用户
 REQUESTS_PER_USER = 1
 GEN_LEN = 1024
 
